@@ -1,10 +1,10 @@
 import * as THREE from './lib/three.module.js';
-
 import { RGBELoader } from './lib/RGBELoader.js';
-
 import { LoadingBar } from './lib/LoadingBar.js';
-
 import { Plane } from './Plane.js';
+import { GLTFLoader } from './lib/GLTFLoader.js';
+import { EnemyPlane } from './EnemyPlane.js'
+import { Vector3 } from './lib/three.module.js';
 
 class Game{
 
@@ -93,7 +93,13 @@ class Game{
 
         window.addEventListener('resize', this.resize.bind(this) );
 
+        this.load();
+
         this.plane = new Plane(this);
+        this.plane.position.y = 0;
+
+        this.enemyPlanes = [];
+        
 
         const geometry = new THREE.BoxGeometry( 1, 1, 1 );
         const material = new THREE.MeshBasicMaterial( {color: 0x00ff00} );
@@ -102,6 +108,98 @@ class Game{
         
         this.active = false;
     } //end constructor
+
+    load(){
+
+        const loader = new GLTFLoader( ).setPath(this.assetsPath);
+
+        // Load a glTF resource
+
+        loader.load(
+
+            // resource URL
+
+            'microplane.glb',
+
+            // called when the resource is loaded
+
+            gltf => {
+
+                this.enemyPlaneGLTF = gltf.scene.children[0];
+               
+                for (let i = 0; i < 5; i++) {
+                    let gltf = this.enemyPlaneGLTF.clone();
+                    let enemyPlane = new EnemyPlane(this, gltf);
+                    enemyPlane.position.x = i * 5;
+                    this.enemyPlanes.push(enemyPlane);
+                }
+
+                this.ready = true;
+                this.loading = false;
+
+            },
+
+            // called while loading is progressing
+
+            xhr => {
+
+                this.loadingBar.update('enemy-plane', xhr.loaded, xhr.total );
+
+            },
+
+            // called when loading has errors
+
+            err => {
+
+                console.error( err );
+
+            }
+
+        );
+
+        loader.load(
+
+            // resource URL
+
+            'microplane.glb',
+
+            // called when the resource is loaded
+
+            gltf => {
+
+                this.enemyPlaneGLTF = gltf.scene.children[0];
+               
+                for (let i = 0; i < 5; i++) {
+                    let gltf = this.enemyPlaneGLTF.clone();
+                    let enemyPlane = new EnemyPlane(this, gltf);
+                    enemyPlane.position.x = i * 5;
+                    this.enemyPlanes.push(enemyPlane);
+                }
+
+                this.ready = true;
+                this.loading = false;
+
+            },
+
+            // called while loading is progressing
+
+            xhr => {
+
+                this.loadingBar.update('enemy-plane', xhr.loaded, xhr.total );
+
+            },
+
+            // called when loading has errors
+
+            err => {
+
+                console.error( err );
+
+            }
+
+        );
+
+    } 
 
 
     resize(){
@@ -127,31 +225,21 @@ class Game{
 
     }
 
-
-
     render() {
 
         this.updateCamera();
 
-         if (this.loading){
-
-            if (this.plane.ready){
-
-                this.loading = false;
-
-                this.loadingBar.visible = false;
-
-            }else{
-
-                return;
-
-            }
-
+        if (this.loading || !this.plane.ready) {
+            return;   
         }
+        this.loadingBar.visible = false;
 
         const time = this.clock.getElapsedTime();
 
         this.plane.update(time, this.pressedKeys, this.active);
+        for (let i = 0; i < this.enemyPlanes.length; i++) {
+            this.enemyPlanes[i].update(time, this.plane, this.active);
+        }
 
         this.renderer.render( this.scene, this.camera );
 

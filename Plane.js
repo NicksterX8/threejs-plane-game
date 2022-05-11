@@ -16,7 +16,9 @@ class Plane{
 
         this.tmpPos = new Vector3();
 
-        this.health = 100;
+        this.rotation = new Vector3();
+
+        this.lives = 3;
 
     } //end constructor
 
@@ -36,6 +38,10 @@ class Plane{
 
     }
 
+    shootMissle() {
+
+    }
+
     update(time, pressedKeys, gameActive){
 
         if (this.propeller !== undefined) this.propeller.rotateZ(1); 
@@ -43,7 +49,7 @@ class Plane{
 
         if (gameActive) {
 
-            let planeVelocity = {forward: 0.05, sideways: 0, up: 0}; 
+            let planeVelocity = {forward: 0.00, sideways: 0, up: 0}; 
 
             if (pressedKeys[87]) {// W
                 planeVelocity.forward += 0.2;
@@ -83,15 +89,14 @@ class Plane{
 
             //this.plane.position.y -= 0.05;
             if (pressedKeys[32]) { // Space
-                //this.plane.position.y += 0.15;
+                this.shootMissle();
             }
             if (pressedKeys[82]) { // R
                 //this.plane.position.y -= 0.15;
             }
-
-            this.health -= 0.1;
+            this.plane.position.y = 0;
         } else {
-            this.plane.position.y = Math.cos(time) * 1.5 - 2;
+            //this.plane.position.y = Math.cos(time) * 1.5 - 2;
         }
     }
 
