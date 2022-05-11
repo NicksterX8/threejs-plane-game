@@ -94,20 +94,26 @@ class Game{
         window.addEventListener('resize', this.resize.bind(this) );
 
         this.load();
-
+        this.missles = [];
         this.plane = new Plane(this);
         this.plane.position.y = 0;
 
         this.enemyPlanes = [];
         
-
-        const geometry = new THREE.BoxGeometry( 1, 1, 1 );
-        const material = new THREE.MeshBasicMaterial( {color: 0x00ff00} );
-        const cube = new THREE.Mesh( geometry, material );
-        this.scene.add( cube );
         
         this.active = false;
+        this.enemyCooldownWait = 5;
+        this.enemySpawnCooldown = this.enemyCooldownWait;
+        this.score = 0;
     } //end constructor
+
+    spawnEnemy() {
+        let gltf = this.enemyPlaneGLTF.clone();
+        let enemyPlane = new EnemyPlane(this, gltf);
+        enemyPlane.plane.position.x = Math.random() * 30 - 15;
+        enemyPlane.plane.position.z = Math.random() * 30 - 15;
+        this.enemyPlanes.push(enemyPlane);
+    }
 
     load(){
 
@@ -127,11 +133,8 @@ class Game{
 
                 this.enemyPlaneGLTF = gltf.scene.children[0];
                
-                for (let i = 0; i < 5; i++) {
-                    let gltf = this.enemyPlaneGLTF.clone();
-                    let enemyPlane = new EnemyPlane(this, gltf);
-                    enemyPlane.position.x = i * 5;
-                    this.enemyPlanes.push(enemyPlane);
+                for (let i = 0; i < 1; i++) {
+                    this.spawnEnemy()
                 }
 
                 this.ready = true;
@@ -158,43 +161,25 @@ class Game{
         );
 
         loader.load(
-
             // resource URL
-
-            'microplane.glb',
+            'bomb.glb',
 
             // called when the resource is loaded
-
             gltf => {
-
-                this.enemyPlaneGLTF = gltf.scene.children[0];
-               
-                for (let i = 0; i < 5; i++) {
-                    let gltf = this.enemyPlaneGLTF.clone();
-                    let enemyPlane = new EnemyPlane(this, gltf);
-                    enemyPlane.position.x = i * 5;
-                    this.enemyPlanes.push(enemyPlane);
-                }
-
+                this.missleGLTF = gltf.scene.children[0];
+                this.missleGLTF.rotation.z = 0.5 * Math.PI;
                 this.ready = true;
                 this.loading = false;
-
             },
 
             // called while loading is progressing
-
             xhr => {
-
-                this.loadingBar.update('enemy-plane', xhr.loaded, xhr.total );
-
+                this.loadingBar.update('missle', xhr.loaded, xhr.total );
             },
 
             // called when loading has errors
-
             err => {
-
                 console.error( err );
-
             }
 
         );
@@ -219,26 +204,99 @@ class Game{
     updateCamera(){
 
         this.cameraTarget.copy(this.plane.position);
-        this.camera.position.y = this.plane.position.y + 18; 
+        this.camera.position.y = this.plane.position.y + 30; 
 
         this.camera.lookAt( this.cameraTarget );
 
     }
 
     render() {
-
+ 
         this.updateCamera();
 
-        if (this.loading || !this.plane.ready) {
+        if (this.loading || !this.plane.ready || !this.missleGLTF || !this.enemyPlaneGLTF) {
             return;   
         }
         this.loadingBar.visible = false;
 
-        const time = this.clock.getElapsedTime();
+        let deltaTime = this.clock.getElapsedTime() - this.time;
+        this.time = this.clock.getElapsedTime();
 
-        this.plane.update(time, this.pressedKeys, this.active);
+        if (this.active) {
+            
+            
+            if (deltaTime)
+                this.enemySpawnCooldown -= deltaTime;
+        
+            let dynamicWait = 3 - (this.time / 10);
+            if (dynamicWait < 0) {
+                dynamicWait = 0;
+            }
+            this.enemyCooldownWait = dynamicWait + 3
+
+            if (this.enemySpawnCooldown <= 0) {
+                this.spawnEnemy();
+                this.enemySpawnCooldown = this.enemyCooldownWait;
+            }
+
+            for (let i = this.missles.length - 1; i >= 0; i--) {
+                this.missles[i].position.x += 0.5 * Math.cos(-this.missles[i].rotation.y + Math.PI);
+                this.missles[i].position.z += 0.5 * Math.sin(-this.missles[i].rotation.y + Math.PI);
+
+                let misslePos = this.missles[i].position;
+                let radius = 1.5;
+                if (this.missles[i].owner != "player") {
+                    if (Math.abs(misslePos.x - this.plane.position.x) < radius && Math.abs(misslePos.z - this.plane.position.z) < radius) {
+                        // hit i guess
+                        this.plane.lives -= 1;
+                        document.getElementById("lives").innerHTML = this.plane.lives;
+                        this.missles[i].dead = true;
+                        
+                        continue;
+                    }
+                }
+
+                if (this.missles[i].owner == "player") {
+                for (let j = this.enemyPlanes.length - 1; j >= 0; j--) {
+                    let ePlane = this.enemyPlanes[j];
+                    if (Math.abs(misslePos.x - ePlane.position.x) < radius && Math.abs(misslePos.z - ePlane.position.z) < radius) {
+                        // hit i guess
+                        ePlane.lives -= 1;
+                        if (ePlane.lives < 1) {
+                            this.score += 1;
+                            document.getElementById("score").innerHTML = this.score;    
+
+                            this.missles[i].dead = true;
+                            break;
+                        }
+                        
+                    }
+                }
+                }
+                
+            }
+
+            for (let i = this.missles.length - 1; i >= 0; i--) {
+                if (this.missles[i].dead) {
+                    this.scene.remove(this.missles[i]);
+                    this.missles.splice(i, 1);
+                }
+            }
+            for (let i = this.enemyPlanes.length - 1; i >= 0; i--) {
+                if (this.enemyPlanes[i].lives < 1) {
+                    this.scene.remove(this.enemyPlanes[i].plane);
+                    this.enemyPlanes.splice(i, 1);
+                }
+            }
+        }
+
+        this.plane.update(this.time, this.pressedKeys, this.active, this.missleGLTF, deltaTime);
         for (let i = 0; i < this.enemyPlanes.length; i++) {
-            this.enemyPlanes[i].update(time, this.plane, this.active);
+            this.enemyPlanes[i].update(this.time, this.plane, this.active, this.missleGLTF, deltaTime);
+        }
+
+        if (this.plane.lives < 1) {
+            document.getElementById("gameover").style.display = "block";
         }
 
         this.renderer.render( this.scene, this.camera );

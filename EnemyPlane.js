@@ -21,6 +21,9 @@ class EnemyPlane {
         this.tmpPos = new Vector3();
 
         this.lives = 1;
+        this.missles = game.missles;
+
+        this.missleCooldown = Math.random() * 1 + 1.5;
 
     } //end constructor
 
@@ -40,7 +43,21 @@ class EnemyPlane {
 
     }
 
-    update(time, player, active){
+    shootMissle(missleGLTF) {
+        let missle = missleGLTF.clone();
+        this.scene.add(missle);
+        missle.position.x = this.plane.position.x;
+        missle.position.z = this.plane.position.z;
+        missle.rotation.y = this.plane.rotation.y + Math.PI / 2;
+        missle.owner = "enemy";
+        this.missles.push(missle);
+
+        this.missleCooldown = 2;
+    }
+
+    update(time, player, active, missleGLTF, deltaTime){
+        if (deltaTime)
+            this.missleCooldown -= deltaTime;
 
         if (this.propeller !== undefined) this.propeller.rotateZ(1); 
         this.plane.rotation.z = Math.sin(time*3)*0.2;
@@ -92,6 +109,11 @@ class EnemyPlane {
         if (this.plane.position.x < -maxDist) {
             this.plane.position.x = -maxDist;
         }
+
+        if (this.missleCooldown <= 0) {
+            this.shootMissle(missleGLTF);
+        }
+
         }
 
         this.plane.position.y = 0;

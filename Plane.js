@@ -12,13 +12,17 @@ class Plane{
 
         this.scene = game.scene;
 
+        this.missles = game.missles;
+
         this.load();
 
         this.tmpPos = new Vector3();
 
         this.rotation = new Vector3();
 
-        this.lives = 3;
+        this.lives = 5;
+
+        this.missleCooldown = 0;
 
     } //end constructor
 
@@ -38,11 +42,23 @@ class Plane{
 
     }
 
-    shootMissle() {
+    shootMissle(missleGLTF) {
+        let missle = missleGLTF.clone();
+        this.scene.add(missle);
+        missle.position.x = this.plane.position.x;
+        missle.position.z = this.plane.position.z;
+        missle.rotation.y = this.plane.rotation.y + Math.PI / 2;
+        missle.owner = "player";
+        this.missles.push(missle);
 
+        this.missleCooldown = 0.7;
     }
 
-    update(time, pressedKeys, gameActive){
+    update(time, pressedKeys, gameActive, missle, deltaTime){
+
+        if (deltaTime) {
+            this.missleCooldown -= deltaTime;
+        }
 
         if (this.propeller !== undefined) this.propeller.rotateZ(1); 
         this.plane.rotation.z = Math.sin(time*3)*0.2;
@@ -52,16 +68,16 @@ class Plane{
             let planeVelocity = {forward: 0.00, sideways: 0, up: 0}; 
 
             if (pressedKeys[87]) {// W
-                planeVelocity.forward += 0.2;
+                planeVelocity.forward += 0.3;
             }
             if (pressedKeys[83]) {// S
-                planeVelocity.forward -= 0.2;
+                planeVelocity.forward -= 0.3;
             }
             if (pressedKeys[65]) {// A
-                planeVelocity.sideways += 0.05;
+                planeVelocity.sideways += 0.08;
             }
             if (pressedKeys[68]) {// D
-                planeVelocity.sideways -= 0.05;
+                planeVelocity.sideways -= 0.08;
             }
         
             this.plane.rotation.y += planeVelocity.sideways;
@@ -89,7 +105,9 @@ class Plane{
 
             //this.plane.position.y -= 0.05;
             if (pressedKeys[32]) { // Space
-                this.shootMissle();
+                if (this.missleCooldown < 0) {
+                    this.shootMissle(missle);
+                }
             }
             if (pressedKeys[82]) { // R
                 //this.plane.position.y -= 0.15;
