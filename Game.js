@@ -240,8 +240,8 @@ class Game{
             }
 
             for (let i = this.missles.length - 1; i >= 0; i--) {
-                this.missles[i].position.x += 0.5 * Math.cos(-this.missles[i].rotation.y + Math.PI);
-                this.missles[i].position.z += 0.5 * Math.sin(-this.missles[i].rotation.y + Math.PI);
+                this.missles[i].position.x += 0.25 * Math.cos(-this.missles[i].rotation.y + Math.PI);
+                this.missles[i].position.z += 0.25 * Math.sin(-this.missles[i].rotation.y + Math.PI);
 
                 let misslePos = this.missles[i].position;
                 let radius = 1.5;
@@ -296,6 +296,7 @@ class Game{
         }
 
         if (this.plane.lives < 1) {
+            this.plane.lives = 0;
             document.getElementById("gameover").style.display = "block";
         }
 
